@@ -1,5 +1,7 @@
 (function () {
   const APP_NAME = "PROJETO ONZE";
+  const APP_VERSION = "Beta v1.0";
+  const APP_BUILD_DATE = "2026-06-14";
   const STORAGE_KEY = "legendsDraftSimulator.v1";
   const PLAYERS = window.LEGENDS_PLAYERS || [];
   const OPPONENTS = window.LEGENDS_OPPONENTS || [];
@@ -208,6 +210,7 @@
   let matchTimeoutId = null;
 
   document.getElementById("appTitle").textContent = APP_NAME;
+  document.getElementById("appVersion").textContent = versionLabel();
   document.getElementById("homeButton").addEventListener("click", () => {
     clearDraftRollTimers();
     clearMatchTimer();
@@ -361,7 +364,7 @@
         <p class="eyebrow">Futebol impossível · 1950-2026</p>
         <div class="home-title-row">
           <h2>PROJETO ONZE</h2>
-          <span class="beta-badge">Beta pública</span>
+          <span class="beta-badge">${escapeHtml(versionLabel())}</span>
         </div>
         <p class="hero-lead">Monte o time que nunca existiu.</p>
         <p class="muted">Pelé, Messi, Cristiano Ronaldo, Maradona, Neymar e centenas de outras lendas podem jogar juntos.</p>
@@ -404,7 +407,7 @@
         <article class="soft-card feedback-card">
           <span>Ajude a melhorar o Projeto Onze</span>
           <strong>Este jogo está em versão beta.</strong>
-          <p class="muted">Se encontrar bugs, resultados estranhos ou tiver sugestões, envie seu feedback.</p>
+          <p class="muted">Se encontrar bugs, resultados estranhos ou tiver sugestões, envie seu feedback informando a versão exibida, celular ou PC, o que aconteceu e print se possível.</p>
           <button class="secondary-button" data-action="feedback" type="button">Enviar Feedback</button>
         </article>
       </section>
@@ -455,6 +458,7 @@
         <span>${stats.groups} grupos da Copa</span>
         <span>${stats.d20Bands} faixas D20</span>
       </div>
+      <footer class="version-footer">${escapeHtml(APP_NAME)} · ${escapeHtml(versionLabel())}</footer>
       ${current && ["champion", "eliminated"].includes(current.status) ? `
         <article class="soft-card">
           <strong>Última campanha:</strong> ${escapeHtml(current.teamName || DEFAULT_TEAM_NAME)} - ${escapeHtml(currentSummary.statusLabel)}
@@ -473,6 +477,15 @@
     };
   }
 
+  function versionLabel() {
+    return APP_BUILD_DATE ? `${APP_VERSION} • ${formatBuildDate(APP_BUILD_DATE)}` : APP_VERSION;
+  }
+
+  function formatBuildDate(date) {
+    const [year, month, day] = String(date).split("-");
+    return year && month && day ? `${day}/${month}/${year}` : String(date);
+  }
+
   function renderManual() {
     clearDraftRollTimers();
     clearMatchTimer();
@@ -481,7 +494,7 @@
         <p class="eyebrow">Manual para testadores</p>
         <div class="home-title-row">
           <h2>Como jogar Projeto Onze</h2>
-          <span class="beta-badge">Beta v0.9</span>
+          <span class="beta-badge">${escapeHtml(versionLabel())}</span>
         </div>
         <p class="hero-lead">Projeto Onze é um simulador onde você monta um time impossível com lendas de diferentes épocas.</p>
         <div class="actions">
@@ -507,9 +520,10 @@
       <article class="card feedback-card">
         <p class="eyebrow">Feedback beta</p>
         <h3>Ajude a melhorar o Projeto Onze</h3>
-        <p class="muted">Se encontrar bugs, resultados estranhos ou tiver sugestões, envie seu feedback.</p>
+        <p class="muted">Se encontrar bugs, resultados estranhos ou tiver sugestões, envie seu feedback. Informe a versão exibida no site, celular ou PC, o que aconteceu e envie print se possível.</p>
         <button class="primary-button" data-action="feedback" type="button">Enviar Feedback</button>
       </article>
+      <footer class="version-footer">${escapeHtml(APP_NAME)} · ${escapeHtml(versionLabel())}</footer>
     `;
   }
 
@@ -782,24 +796,25 @@
     if (campaign.draftMode === "selection") return createSelectionDraftPack(campaign, stage);
     const roll = randomInt(1, 20);
     const band = draftBand(roll);
-    const selectedIds = new Set(campaign.squad.map((player) => player.id));
+    const draftedKeys = draftedPlayerKeys(campaign);
     const listSize = Math.max(stage.qty + 4, 6);
 
-    let options = uniqueNames(
+    let options = uniqueCards(
       shuffle(PLAYERS.filter((player) => {
         const ovr = playerOverall(player);
-        return !player.selectionOnly && playerMatchesDraftStage(player, stage) && ovr >= band.minOvr && ovr <= band.maxOvr && !selectedIds.has(player.id);
+        return !player.selectionOnly && playerMatchesDraftStage(player, stage) && ovr >= band.minOvr && ovr <= band.maxOvr && !draftedKeys.has(playerSourceKey(player));
       })),
       listSize
     );
 
     if (options.length < stage.qty) {
-      const usedNames = new Set(options.map((player) => player.nome));
+      const usedKeys = new Set(options.map(playerSourceKey));
       const fallback = shuffle(PLAYERS.filter((player) => {
         const ovr = playerOverall(player);
-        return !player.selectionOnly && playerMatchesDraftStage(player, stage) && ovr >= band.minOvr && ovr <= band.maxOvr && !selectedIds.has(player.id) && !usedNames.has(player.nome);
+        const key = playerSourceKey(player);
+        return !player.selectionOnly && playerMatchesDraftStage(player, stage) && ovr >= band.minOvr && ovr <= band.maxOvr && !draftedKeys.has(key) && !usedKeys.has(key);
       }));
-      options = options.concat(uniqueNames(fallback, listSize - options.length));
+      options = options.concat(uniqueCards(fallback, listSize - options.length));
     }
 
     return { roll, rarity: band.key, options, picks: [], revealed: false };
@@ -854,12 +869,13 @@
     return result;
   }
 
-  function uniqueNames(players, limit) {
-    const names = new Set();
+  function uniqueCards(players, limit) {
+    const keys = new Set();
     const result = [];
     for (const player of players) {
-      if (names.has(player.nome)) continue;
-      names.add(player.nome);
+      const key = playerSourceKey(player);
+      if (keys.has(key)) continue;
+      keys.add(key);
       result.push(player);
       if (result.length >= limit) break;
     }
@@ -924,8 +940,8 @@
   }
 
   function draftConfirmBar(campaign, selectedCards, canConfirm, label) {
-    const selectedIds = new Set(campaign.squad.map((player) => player.id));
-    const total = campaign.squad.length + selectedCards.filter((player) => !selectedIds.has(player.id)).length;
+    const selectedKeys = draftedPlayerKeys(campaign);
+    const total = campaign.squad.length + selectedCards.filter((player) => !selectedKeys.has(playerSourceKey(player))).length;
     const complete = total >= 23;
     return `
       <div class="draft-confirm-bar ${canConfirm ? "ready" : ""} ${complete ? "complete" : ""}">
@@ -983,13 +999,15 @@
       const player = findPlayer(id);
       return pack.mode === "selection" && player ? copySelectionPlayer(player, campaign, pack, index) : player;
     }).filter(Boolean);
-    const existingIds = new Set(campaign.squad.map((player) => player.id));
+    const existingKeys = draftedPlayerKeys(campaign);
     const confirmedIds = [];
     chosen.forEach((player) => {
-      if (!existingIds.has(player.id)) {
+      const sourceKey = playerSourceKey(player);
+      if (!existingKeys.has(sourceKey)) {
         campaign.squad.push(player);
         campaign.playerStats[player.id] = campaign.playerStats[player.id] || basePlayerStat(player);
         confirmedIds.push(player.id);
+        existingKeys.add(sourceKey);
       }
     });
     campaign.bench = Array.from(new Set([...(campaign.bench || []), ...confirmedIds]));
@@ -1004,14 +1022,16 @@
     return {
       ...player,
       id: `${player.id}__${campaign.id}__${campaign.draftStage}__${index}`,
-      sourcePlayerId: player.sourcePlayerId || player.id,
+      sourceId: player.sourceId || player.originalId || player.sourcePlayerId || player.id,
+      originalId: player.originalId || player.sourceId || player.sourcePlayerId || player.id,
+      sourcePlayerId: player.sourcePlayerId || player.sourceId || player.originalId || player.id,
       sourceSelectionId: pack.selectedSelectionId || null,
       selectionCopy: true
     };
   }
 
   function playerSourceKey(player) {
-    return player?.sourcePlayerId || player?.id || "";
+    return player?.sourceId || player?.originalId || player?.sourcePlayerId || player?.id || "";
   }
 
   function draftedPlayerKeys(campaign) {
@@ -1395,14 +1415,15 @@
     saveStore();
 
     app.innerHTML = `
-      <article class="card">
+      ${formationActionBar(selectedIds.size, slots.length, complete)}
+      <article class="card formation-intro-card">
         <p class="eyebrow">Formação</p>
         <h2>Escolha titulares</h2>
         <p class="muted">Preencha os 11 espaços usando jogadores compatíveis com cada posição. Jogadores marcados com ⭐ já estão entre os titulares.</p>
         <select class="select" id="formationSelect" aria-label="Formação">
           ${Object.keys(FORMATIONS).map((name) => `<option value="${name}" ${name === campaign.formation ? "selected" : ""}>${name}</option>`).join("")}
         </select>
-        ${formationNotice ? `<p class="notice">${escapeHtml(formationNotice)}</p>` : (complete ? "" : `<p class="notice">A formação ainda não foi preenchida.</p>`)}
+        ${formationNotice ? `<p class="notice compact-notice">${escapeHtml(formationNotice)}</p>` : (complete ? "" : `<p class="notice compact-notice">Complete os 11 titulares.</p>`)}
       </article>
 
       <section class="formation-workbench">
@@ -1430,6 +1451,22 @@
         <div class="actions">
           <button class="primary-button" data-action="save-lineup" type="button" ${complete ? "" : "disabled"}>Salvar escalação</button>
           <button class="ghost-button" data-action="roster" type="button">Ver elenco</button>
+        </div>
+      </article>
+    `;
+  }
+
+  function formationActionBar(selectedCount, totalSlots, complete) {
+    return `
+      <article class="formation-action-bar ${complete ? "complete" : ""}">
+        <div>
+          <strong>Titulares: ${selectedCount}/${totalSlots}</strong>
+          <small>${complete ? "Escalação completa" : "Complete os 11 titulares"}</small>
+        </div>
+        <div class="formation-action-buttons">
+          <button class="primary-button" data-action="save-lineup" type="button" ${complete ? "" : "disabled"}>Salvar Escalação</button>
+          <button class="secondary-button" data-action="roster" type="button">Ver Elenco</button>
+          <button class="ghost-button" data-action="continue" type="button">Voltar</button>
         </div>
       </article>
     `;
@@ -1687,7 +1724,7 @@
     if (includeDrafted) {
       players.sort((a, b) => Number(draftedKeys.has(playerSourceKey(a))) - Number(draftedKeys.has(playerSourceKey(b))));
     }
-    return uniqueNames(players, 8);
+    return uniqueCards(players, 8);
   }
 
   function minimumSelectionPlayers(stage) {

@@ -513,6 +513,79 @@ h3 {
   width: 100%;
 }
 
+.formation-action-bar {
+  position: sticky;
+  top: 68px;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(9, 14, 12, 0.92);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(14px);
+}
+
+.formation-action-bar.complete {
+  border-color: rgba(204, 255, 61, 0.45);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.26), 0 0 0 2px rgba(204, 255, 61, 0.1);
+}
+
+.formation-action-bar strong,
+.formation-action-bar small {
+  display: block;
+}
+
+.formation-action-bar strong {
+  font-size: 0.96rem;
+  font-weight: 950;
+}
+
+.formation-action-bar small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.formation-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.formation-action-buttons > button {
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 0.82rem;
+}
+
+.formation-intro-card {
+  display: grid;
+  gap: 8px;
+}
+
+.formation-intro-card h2,
+.formation-intro-card p {
+  margin-bottom: 0;
+}
+
+.compact-notice {
+  margin-bottom: 0;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+}
+
+.version-footer {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  text-align: center;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -2622,6 +2695,39 @@ button:disabled {
   .home-hero::before,
   .hall-hero::before {
     display: none;
+  }
+
+  .top-title-row {
+    gap: 6px;
+  }
+
+  .beta-badge {
+    min-height: 24px;
+    padding: 3px 7px;
+    font-size: 0.64rem;
+  }
+
+  .formation-action-bar {
+    top: 72px;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .formation-action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  .formation-action-buttons > button {
+    width: 100%;
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 0.74rem;
+  }
+
+  .formation-action-buttons > button:first-child {
+    grid-column: 1 / -1;
   }
 
   .football-field {
