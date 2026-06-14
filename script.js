@@ -1873,6 +1873,7 @@
           <span class="pill">${escapeHtml(SIMULATION_SPEEDS[store.settings.simulationSpeed]?.label || SIMULATION_SPEEDS.normal.label)}</span>
           ${campaign.worldCup && campaign.status === "groups" ? `<span class="pill">${escapeHtml(campaign.worldCup.groupName)}</span>` : ""}
         </div>
+        ${opponentDetailsPanel(opponent)}
         ${balanceDebugPanel(campaign, opponent)}
         <button class="primary-button" data-action="simulate" type="button">Simular partida</button>
       </article>
@@ -2324,6 +2325,7 @@
       events: createGoalEvents(campaign, opponent, teamGoals, opponentGoals),
       substitutions: [],
       substitutionSuggestions: [],
+      opponentSnapshot: createOpponentSnapshot(opponent),
       stats: createMatchStats(team, opponent, teamGoals, opponentGoals),
       balance: DEBUG_BALANCE ? balance : null
     };
@@ -2600,9 +2602,8 @@
           <strong>Último evento</strong>
           ${snapshot.lastEvent ? goalEvent(snapshot.lastEvent) : `<p class="muted">Partida em andamento. Nenhum gol até agora.</p>`}
         </div>
+        ${matchEventsPanel(result, { upToMinute: minute, compact: true, title: "Principais eventos" })}
         ${suggestion ? substitutionSuggestionCard(suggestion) : ""}
-        ${substitutionTimeline(result, minute)}
-        ${substitutionSuggestionsTimeline(result, minute)}
         ${matchStatsPanel(scaleMatchStats(result.stats, minute), "Estatísticas ao vivo")}
         <div class="simulation-footer">
           <span class="pill">${escapeHtml(speed.label)}</span>
@@ -2688,6 +2689,7 @@
     campaign.finishStage = finishStage || campaign.finishStage || "";
     campaign.finishedAt = new Date().toISOString();
     campaign.summary = buildCampaignSummary(campaign);
+    campaign.teamSnapshot = createCampaignTeamSnapshot(campaign, campaign.summary);
     if (campaign.archivedAt) return;
     campaign.archivedAt = new Date().toISOString();
     store.archive.unshift(JSON.parse(JSON.stringify(campaign)));
@@ -2977,6 +2979,8 @@
           <span>Jogo decisivo</span>
           <strong>${escapeHtml(summary.finalScore || "Sem partida registrada")}</strong>
         </div>
+        ${teamSnapshotDetails(campaign, champion ? "Ver Elenco Campeão" : "Ver Time")}
+        ${summary.finalOpponent ? opponentDetailsPanel(summary.finalOpponent, "Ver Time Adversário") : ""}
         <div class="summary-stat-grid">
           ${summaryStat("Jogos", summary.stats.games)}
           ${summaryStat("Vitórias", summary.stats.wins)}
@@ -3068,7 +3072,8 @@
       stats,
       topScorer: campaignLeader(campaign, "goals"),
       topAssister: campaignLeader(campaign, "assists"),
-      bestMatch: bestCampaignMatch(results)
+      bestMatch: bestCampaignMatch(results),
+      finalOpponent: finalResult ? (finalResult.opponentSnapshot || resolveTeam(finalResult.opponentId)) : null
     };
   }
 
@@ -3174,6 +3179,7 @@
         <p class="eyebrow">Histórico</p>
         <h2>Campanhas salvas</h2>
         <p class="muted">Resultados fechados ficam guardados no navegador deste dispositivo.</p>
+        ${bestCampaignsPanel(campaigns)}
         ${campaigns.length ? `
           <div class="progress-list">
             ${campaigns.map((campaign) => campaignHistory(campaign)).join("")}
@@ -3198,6 +3204,7 @@
         ${leaderboard("Mais títulos", hall.titles, "títulos")}
         ${leaderboard("Mais decisivos", hall.deciders, "pts")}
       </section>
+      ${championCampaignsPanel()}
     `;
   }
 
@@ -3266,6 +3273,61 @@
     `;
   }
 
+  function championCampaignsPanel() {
+    const champions = store.archive.filter((campaign) => campaign.status === "champion").slice(0, 6);
+    if (!champions.length) return "";
+    return `
+      <article class="card">
+        <div class="board-header">
+          <div>
+            <p class="eyebrow">Times Campeões</p>
+            <h3>Elencos campeões salvos</h3>
+          </div>
+          <span class="pill">${champions.length}</span>
+        </div>
+        <div class="progress-list">
+          ${champions.map((campaign) => `
+            <div class="progress-item">
+              <span>
+                <strong>${escapeHtml(campaign.teamName || DEFAULT_TEAM_NAME)}</strong><br>
+                <small class="muted">${escapeHtml(formatDate(campaign.finishedAt || campaign.createdAt))} · ${escapeHtml(campaign.formation || "Formação não registrada")}</small>
+              </span>
+              <span class="pill">Campeão</span>
+            </div>
+            ${teamSnapshotDetails(campaign, "Ver Elenco Campeão")}
+          `).join("")}
+        </div>
+      </article>
+    `;
+  }
+
+  function bestCampaignsPanel(campaigns) {
+    const ranked = [...campaigns].sort((a, b) => campaignRankValue(b) - campaignRankValue(a)).slice(0, 5);
+    if (!ranked.length) return "";
+    return `
+      <div class="soft-card best-campaigns-card">
+        <strong>Melhores Campanhas</strong>
+        <div class="progress-list">
+          ${ranked.map((campaign, index) => {
+            const summary = campaign.summary || buildCampaignSummary(campaign);
+            return `
+              <div class="progress-item compact-progress-item">
+                <span><span class="rank-index">${index + 1}</span>${escapeHtml(campaign.teamName || DEFAULT_TEAM_NAME)} · ${escapeHtml(summary.statusLabel)}</span>
+                <strong>${summary.stats.wins}V</strong>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function campaignRankValue(campaign) {
+    const key = (campaign.summary || buildCampaignSummary(campaign)).statusKey;
+    const order = { champion: 6, "runner-up": 5, semifinal: 4, quarterfinal: 3, "round-of-16": 2, group: 1, eliminated: 0 };
+    return order[key] || 0;
+  }
+
   function campaignHistory(campaign) {
     const results = campaign.results || [];
     const summary = campaign.summary || buildCampaignSummary(campaign);
@@ -3278,6 +3340,7 @@
         </span>
         <span class="pill">${results.length} jogo(s)</span>
       </div>
+      ${teamSnapshotDetails(campaign)}
       <div class="history-match-list">
         ${results.map((result, index) => historyMatchCard(campaign, result, index)).join("") || `<p class="empty">Sem partidas</p>`}
       </div>
@@ -3300,7 +3363,6 @@
     const campaign = currentCampaign(false);
     const finished = campaign && ["champion", "eliminated"].includes(campaign.status);
     const buttonLabel = finished ? "Ver campanha" : "Próxima partida";
-    const events = result.events || [];
     return `
       <article class="card">
         <p class="eyebrow">${escapeHtml(outcome)}${result.decidedByPenalties ? " nos pênaltis" : ""}</p>
@@ -3312,11 +3374,9 @@
           </div>
           ${result.decidedByPenalties ? `<div class="penalty-scoreline">${escapeHtml(penaltyScoreText(result))}</div>` : ""}
         </div>
-        <div class="event-list">
-          ${events.length ? events.map(goalEvent).join("") : `<p class="empty">Jogo sem gols.</p>`}
-        </div>
-        ${substitutionTimeline(result)}
-        ${substitutionSuggestionsTimeline(result)}
+        ${!result.userWon && !result.userDraw ? `<p class="notice compact-notice">Quer entender a derrota? Veja o time adversário e seus links ativos.</p>` : ""}
+        ${opponentDetailsPanel(result.opponentSnapshot || resolveTeam(result.opponentId), "Ver Time Adversário")}
+        ${matchEventsPanel(result)}
         ${penaltyShootoutPanel(result)}
         ${matchStatsPanel(result.stats)}
         <div class="actions">
@@ -3333,7 +3393,6 @@
   }
 
   function matchSummaryCard(result, id, expanded) {
-    const events = result.events || [];
     return `
       <button class="match-history-card" data-action="history-toggle" data-id="${escapeHtml(id)}" type="button">
         <span>
@@ -3344,9 +3403,8 @@
       </button>
       ${expanded ? `
         <div class="match-event-panel">
-          ${events.length ? events.map(goalEvent).join("") : `<p class="empty">Jogo sem gols.</p>`}
-          ${substitutionTimeline(result)}
-          ${substitutionSuggestionsTimeline(result)}
+          ${opponentDetailsPanel(result.opponentSnapshot || resolveTeam(result.opponentId), "Ver Time Adversário")}
+          ${matchEventsPanel(result)}
           ${penaltyShootoutPanel(result)}
           ${matchStatsPanel(result.stats)}
         </div>
@@ -3370,6 +3428,356 @@
 
   function penaltyScoreText(result) {
     return result?.penalties ? `${result.penalties.userGoals} x ${result.penalties.opponentGoals} nos pênaltis` : "";
+  }
+
+  function matchEventsPanel(result, options = {}) {
+    const upToMinute = options.upToMinute ?? null;
+    const compact = Boolean(options.compact);
+    const title = options.title || "Eventos da partida";
+    const userName = result.teamName || DEFAULT_TEAM_NAME;
+    const opponentName = result.opponentName || "Adversário";
+    const grouped = groupedMatchEvents(result, upToMinute, compact);
+    return `
+      <div class="match-events-panel ${compact ? "compact-events" : ""}">
+        <div class="board-header">
+          <h3>${escapeHtml(title)}</h3>
+          <span class="pill">${compact ? "compacto" : "organizado"}</span>
+        </div>
+        <div class="team-events-grid">
+          ${teamEventsColumn(userName, grouped.user)}
+          ${teamEventsColumn(opponentName, grouped.opponent)}
+        </div>
+      </div>
+    `;
+  }
+
+  function groupedMatchEvents(result, upToMinute = null, compact = false) {
+    const rows = [];
+    const includeMinute = (minute) => upToMinute === null || minute <= upToMinute;
+    (result.events || []).filter((event) => includeMinute(event.minute)).forEach((event) => {
+      rows.push({
+        team: event.team,
+        category: "Gols",
+        minute: event.minute,
+        priority: 1,
+        html: `<strong>⚽ ${event.minute}' ${escapeHtml(event.scorer)}</strong><small>Assistência: ${escapeHtml(event.assister)}</small>`
+      });
+    });
+    (result.substitutions || []).filter((event) => includeMinute(event.minute)).forEach((event) => {
+      rows.push({
+        team: "user",
+        category: "Substituições",
+        minute: event.minute,
+        priority: 2,
+        html: `<strong>${event.minute}' ${escapeHtml(event.inName)} entrou</strong><small>⬅ Saiu ${escapeHtml(event.outName)}${event.slot ? ` · ${escapeHtml(event.slot)}` : ""}</small>`
+      });
+    });
+    (result.substitutionSuggestions || []).filter((event) => includeMinute(event.minute)).slice(0, 2).forEach((event) => {
+      rows.push({
+        team: "user",
+        category: "Eventos táticos",
+        minute: event.minute,
+        priority: 5,
+        html: `<strong>${event.minute}' Ajuste tático sugerido</strong><small>${escapeHtml(event.text)}</small>`
+      });
+    });
+    derivedDisplayEvents(result).filter((event) => includeMinute(event.minute)).forEach((event) => rows.push(event));
+
+    const byTeam = {
+      user: rows.filter((event) => event.team === "user"),
+      opponent: rows.filter((event) => event.team === "opponent")
+    };
+    Object.keys(byTeam).forEach((team) => {
+      byTeam[team].sort((a, b) => a.priority - b.priority || a.minute - b.minute);
+      if (compact) byTeam[team] = byTeam[team].slice(0, 5);
+    });
+    return byTeam;
+  }
+
+  function derivedDisplayEvents(result) {
+    const stats = result.stats || {};
+    const rows = [];
+    const userGoals = result.userGoals || 0;
+    const opponentGoals = result.opponentGoals || 0;
+    const userShots = stats.shots?.[0] || 0;
+    const opponentShots = stats.shots?.[1] || 0;
+    const userSaves = stats.saves?.[0] || 0;
+    const opponentSaves = stats.saves?.[1] || 0;
+    const userName = firstEventName(result, "user") || "Seu ataque";
+    const opponentName = firstEventName(result, "opponent") || firstOpponentThreat(result);
+
+    if (userShots > userGoals + 4) {
+      rows.push(displayEvent("user", "Grandes chances", 35, 3, `35' ${userName} perdeu uma chance clara.`));
+    }
+    if (opponentShots > opponentGoals + 3) {
+      rows.push(displayEvent("opponent", "Grandes chances", 41, 3, `41' ${opponentName} levou perigo.`));
+    }
+    if (userSaves > 0) {
+      rows.push(displayEvent("user", "Defesas", 58, 4, `58' Seu goleiro fez grande defesa.`));
+    }
+    if (opponentSaves > 0) {
+      rows.push(displayEvent("opponent", "Defesas", 52, 4, `52' O goleiro adversário salvou a finalização.`));
+    }
+    if ((stats.possession?.[0] || 0) >= 56) {
+      rows.push(displayEvent("user", "Eventos táticos", 66, 5, `66' Seu meio-campo controla o ritmo.`));
+    } else if ((stats.possession?.[1] || 0) >= 56) {
+      rows.push(displayEvent("opponent", "Eventos táticos", 66, 5, `66' ${result.opponentName || "O adversário"} controla o meio-campo.`));
+    }
+    return rows;
+  }
+
+  function displayEvent(team, category, minute, priority, text) {
+    return {
+      team,
+      category,
+      minute,
+      priority,
+      html: `<strong>${escapeHtml(text)}</strong>`
+    };
+  }
+
+  function firstEventName(result, team) {
+    const event = (result.events || []).find((item) => item.team === team);
+    return event?.scorer || "";
+  }
+
+  function firstOpponentThreat(result) {
+    const opponent = result.opponentSnapshot || resolveTeam(result.opponentId);
+    return opponent?.keyNames?.[0] || opponent?.scorers?.[0] || result.opponentName || "O adversário";
+  }
+
+  function teamEventsColumn(name, events) {
+    const categories = ["Gols", "Grandes chances", "Defesas", "Substituições", "Eventos táticos"];
+    return `
+      <article class="team-events-card">
+        <h4>${escapeHtml(name)}</h4>
+        ${events.length ? categories.map((category) => {
+          const categoryEvents = events.filter((event) => event.category === category);
+          if (!categoryEvents.length) return "";
+          return `
+            <div class="event-category">
+              <strong>${escapeHtml(category)}</strong>
+              ${categoryEvents.map((event) => `<div class="event-row">${event.html}</div>`).join("")}
+            </div>
+          `;
+        }).join("") : `<p class="empty">Sem eventos relevantes.</p>`}
+      </article>
+    `;
+  }
+
+  function opponentDetailsPanel(opponentLike, label = "Ver Time Adversário") {
+    if (!opponentLike) return "";
+    const snapshot = opponentLike.roster ? opponentLike : createOpponentSnapshot(opponentLike);
+    return `
+      <details class="details-panel opponent-details">
+        <summary>${escapeHtml(label)}</summary>
+        ${opponentSnapshotContent(snapshot)}
+      </details>
+    `;
+  }
+
+  function opponentSnapshotContent(snapshot) {
+    const strength = snapshot.strength || {};
+    return `
+      <div class="opponent-detail-grid">
+        <article class="soft-card">
+          <p class="eyebrow">Adversário</p>
+          <h3>${escapeHtml(snapshot.nome)}</h3>
+          <div class="row">
+            <span class="pill">${escapeHtml(snapshot.formation || "Formação aproximada")}</span>
+            <span class="pill">${escapeHtml(difficultyLabel(snapshot.difficulty))}</span>
+          </div>
+          <div class="opponent-roster-list">
+            ${(snapshot.roster || []).length ? snapshot.roster.map(opponentRosterRow).join("") : `<p class="empty">Elenco detalhado não disponível nesta base.</p>`}
+          </div>
+          ${(snapshot.keyNames || []).length ? `<div class="bench-list">${snapshot.keyNames.map((name) => `<span class="bench-chip">${escapeHtml(name)}</span>`).join("")}</div>` : ""}
+        </article>
+        <article class="soft-card">
+          <p class="eyebrow">Links e força</p>
+          <h3>Resumo do adversário</h3>
+          <div class="summary-stat-grid compact-stat-grid">
+            ${summaryStat("Geral", roundRating(strength.overall || 0))}
+            ${summaryStat("Ataque", roundRating(strength.offense || 0))}
+            ${summaryStat("Meio", roundRating(strength.creativity || 0))}
+            ${summaryStat("Defesa", roundRating(strength.defense || 0))}
+          </div>
+          <div class="link-chip-list">
+            ${(snapshot.links || []).length ? snapshot.links.map((link) => `<span class="link-chip selection-link-chip">${escapeHtml(link.label)}: ${link.count} jogadores</span>`).join("") : `<span class="link-chip">Links históricos não detalhados</span>`}
+          </div>
+          <p class="muted">Força estimada exibida apenas para leitura. A simulação não foi alterada.</p>
+        </article>
+      </div>
+    `;
+  }
+
+  function opponentRosterRow(player) {
+    return `
+      <div class="opponent-roster-row">
+        <strong>${escapeHtml(player.nome)} ${escapeHtml(String(player.ano || ""))}</strong>
+        <span>${escapeHtml(player.position || player.posicoes?.join(" / ") || player.setor || "-")}</span>
+        <b>OVR ${player.ovr || "?"}</b>
+      </div>
+    `;
+  }
+
+  function createOpponentSnapshot(opponent) {
+    const cards = opponentSelectionCards(opponent);
+    const roster = pickOpponentRoster(cards).map(playerSnapshot);
+    const strength = opponentStrength(opponent);
+    const keyNames = Array.from(new Set([...(opponent.scorers || []), ...(opponent.assisters || [])]))
+      .filter((name) => !roster.some((player) => `${player.nome} ${player.ano}` === name))
+      .slice(0, 8);
+    const links = cards.length >= 2 ? [{ label: opponent.nome, count: cards.length }] : [];
+    return {
+      id: opponent.id,
+      nome: opponent.nome,
+      difficulty: opponent.difficulty,
+      formation: cards.length >= 11 ? "4-3-3 aproximada" : "Lista histórica parcial",
+      roster,
+      keyNames,
+      links,
+      strength: {
+        overall: strength.overall,
+        offense: strength.offense,
+        creativity: strength.creativity,
+        defense: strength.defense,
+        goalkeeper: strength.goalkeeper
+      }
+    };
+  }
+
+  function opponentSelectionCards(opponent) {
+    return PLAYERS
+      .filter((player) => playerSelectionTags(player).includes(opponent.id))
+      .sort((a, b) => playerOverall(b) - playerOverall(a) || cardLabel(a).localeCompare(cardLabel(b)));
+  }
+
+  function pickOpponentRoster(players) {
+    const targets = { GK: 1, DEF: 4, MID: 3, ATT: 3 };
+    const picked = [];
+    Object.entries(targets).forEach(([sector, count]) => {
+      picked.push(...players.filter((player) => player.setor === sector && !picked.includes(player)).slice(0, count));
+    });
+    if (picked.length < Math.min(11, players.length)) {
+      players.filter((player) => !picked.includes(player)).slice(0, Math.min(11, players.length) - picked.length).forEach((player) => picked.push(player));
+    }
+    return picked;
+  }
+
+  function difficultyLabel(difficulty) {
+    const labels = { medium: "Médio", strong: "Forte", elite: "Elite", historical: "Histórico" };
+    return labels[difficulty] || "Adversário";
+  }
+
+  function playerSnapshot(player) {
+    return {
+      id: player.id,
+      sourceId: playerSourceKey(player),
+      nome: player.nome,
+      ano: player.ano,
+      pais: player.pais,
+      clube: player.clube || "",
+      idade: player.idade || "",
+      setor: player.setor,
+      posicoes: [...(player.posicoes || [])],
+      position: (player.posicoes || []).join(" / "),
+      ovr: playerOverall(player),
+      offense: player.offense,
+      defense: player.defense,
+      creativity: player.creativity,
+      tier: player.tier,
+      selectionTags: [...(player.selectionTags || [])]
+    };
+  }
+
+  function createCampaignTeamSnapshot(campaign, summary = null) {
+    const starters = getLineupPlayers(campaign).map(playerSnapshot);
+    const starterIds = new Set(starters.map((player) => player.id));
+    const bench = (campaign.squad || []).filter((player) => !starterIds.has(player.id)).map(playerSnapshot);
+    const strength = teamStrength(starters);
+    const links = lineupLinkAnalysis(starters);
+    const stats = summary?.stats || campaignTotals(campaign.results || []);
+    const status = summary || buildCampaignSummary(campaign);
+    return {
+      teamName: teamName(campaign),
+      appVersion: APP_VERSION,
+      buildDate: APP_BUILD_DATE,
+      savedAt: campaign.finishedAt || new Date().toISOString(),
+      draftMode: campaign.draftMode || "classic",
+      formation: campaign.formation,
+      lineup: { ...(campaign.lineup || {}) },
+      starters,
+      bench,
+      ovrAvg: roundRating(strength.ovrAvg || 0),
+      links: {
+        countries: links.countryGroups.map((group) => ({ label: group.label, count: group.count })),
+        selections: links.selectionGroups.map((group) => ({ label: group.label, count: group.count })),
+        bonus: links.bonus
+      },
+      campaign: {
+        games: stats.games,
+        wins: stats.wins,
+        draws: stats.draws,
+        losses: stats.losses,
+        goalsFor: stats.goalsFor,
+        goalsAgainst: stats.goalsAgainst,
+        goalDifference: stats.goalDifference,
+        statusKey: status.statusKey,
+        statusLabel: status.statusLabel
+      }
+    };
+  }
+
+  function teamSnapshotDetails(campaign, label = "Ver Time") {
+    return `
+      <details class="details-panel team-snapshot-details">
+        <summary>${escapeHtml(label)}</summary>
+        ${campaign.teamSnapshot ? teamSnapshotContent(campaign.teamSnapshot) : `<p class="empty">Elenco não salvo nesta versão.</p>`}
+      </details>
+    `;
+  }
+
+  function teamSnapshotContent(snapshot) {
+    const fakeCampaign = { formation: snapshot.formation || "4-3-3", lineup: snapshot.lineup || {} };
+    const champion = snapshot.campaign?.statusKey === "champion";
+    return `
+      <div class="team-snapshot-grid">
+        <article class="soft-card">
+          <p class="eyebrow">${champion ? "Time Campeão" : "Elenco histórico"}</p>
+          <h3>${escapeHtml(snapshot.teamName || DEFAULT_TEAM_NAME)}</h3>
+          <div class="row">
+            <span class="pill">${escapeHtml(snapshot.formation || "Formação não registrada")}</span>
+            <span class="pill">OVR médio ${snapshot.ovrAvg || "-"}</span>
+            <span class="pill">${escapeHtml(snapshot.appVersion || "Versão antiga")}</span>
+          </div>
+          ${lineupBoard(fakeCampaign, snapshot.starters || [], "Titulares salvos")}
+        </article>
+        <article class="soft-card">
+          <p class="eyebrow">Campanha</p>
+          <h3>${escapeHtml(snapshot.campaign?.statusLabel || "Campanha salva")}</h3>
+          <div class="summary-stat-grid compact-stat-grid">
+            ${summaryStat("Jogos", snapshot.campaign?.games ?? 0)}
+            ${summaryStat("Vitórias", snapshot.campaign?.wins ?? 0)}
+            ${summaryStat("Gols pró", snapshot.campaign?.goalsFor ?? 0)}
+            ${summaryStat("Gols contra", snapshot.campaign?.goalsAgainst ?? 0)}
+          </div>
+          <strong>Banco final</strong>
+          <div class="bench-list">
+            ${(snapshot.bench || []).length ? snapshot.bench.map((player) => `<span class="bench-chip">${escapeHtml(player.nome)} ${escapeHtml(String(player.ano))} · ${escapeHtml(player.position || "")} · OVR ${player.ovr}</span>`).join("") : `<span class="bench-chip empty-chip">Banco não registrado</span>`}
+          </div>
+          <strong>Links ativos</strong>
+          <div class="link-chip-list">
+            ${snapshotLinkChips(snapshot)}
+          </div>
+        </article>
+      </div>
+    `;
+  }
+
+  function snapshotLinkChips(snapshot) {
+    const country = (snapshot.links?.countries || []).map((link) => `<span class="link-chip country-link-chip">${escapeHtml(link.label)}: ${link.count}</span>`);
+    const selection = (snapshot.links?.selections || []).map((link) => `<span class="link-chip selection-link-chip">${escapeHtml(link.label)}: ${link.count}</span>`);
+    return country.concat(selection).join("") || `<span class="link-chip">Nenhum link ativo registrado</span>`;
   }
 
   function substitutionTimeline(result, upToMinute = null) {

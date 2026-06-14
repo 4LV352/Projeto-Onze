@@ -2232,6 +2232,139 @@ button:disabled {
   margin-top: 12px;
 }
 
+.details-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.details-panel summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #101405;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  font-size: 0.84rem;
+  font-weight: 950;
+  cursor: pointer;
+  list-style: none;
+}
+
+.details-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.details-panel[open] summary {
+  margin-bottom: 10px;
+}
+
+.match-events-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.team-events-grid,
+.opponent-detail-grid,
+.team-snapshot-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.team-events-card {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.team-events-card h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.event-category {
+  display: grid;
+  gap: 6px;
+}
+
+.event-category > strong {
+  color: var(--accent);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.event-row {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 0.83rem;
+}
+
+.event-row small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.opponent-roster-list {
+  display: grid;
+  gap: 6px;
+}
+
+.opponent-roster-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 0.82rem;
+}
+
+.opponent-roster-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opponent-roster-row span {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.opponent-roster-row b {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.compact-stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.best-campaigns-card {
+  margin-bottom: 12px;
+}
+
+.compact-progress-item {
+  padding: 8px;
+}
+
 .goal-event {
   border: 1px solid var(--line);
   border-left: 4px solid var(--accent);
@@ -2666,6 +2799,13 @@ button:disabled {
     grid-column: 2;
   }
 
+  .team-events-grid,
+  .opponent-detail-grid,
+  .team-snapshot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
   .actions {
     grid-template-columns: repeat(auto-fit, minmax(170px, max-content));
     align-items: center;
@@ -2728,6 +2868,15 @@ button:disabled {
 
   .formation-action-buttons > button:first-child {
     grid-column: 1 / -1;
+  }
+
+  .opponent-roster-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .opponent-roster-row b {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .football-field {
