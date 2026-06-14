@@ -355,6 +355,7 @@
     const current = store.current;
     const canContinue = current && !["champion", "eliminated"].includes(current.status);
     const currentSummary = current && ["champion", "eliminated"].includes(current.status) ? (current.summary || buildCampaignSummary(current)) : null;
+    const stats = homeStats();
     app.innerHTML = `
       <article class="card hero-card home-hero">
         <p class="eyebrow">Futebol impossível · 1950-2026</p>
@@ -424,7 +425,7 @@
       <section class="how-grid">
         <article class="soft-card step-card">
           <span>⚽</span>
-          <strong>500+ Lendas Históricas</strong>
+          <strong>${stats.players} Jogadores Históricos</strong>
           <p class="muted">Craques de 1950 a 2026 em cartas com OVR visual e atributos internos.</p>
         </article>
         <article class="soft-card step-card">
@@ -449,10 +450,10 @@
         </article>
       </section>
       <div class="home-stats">
-        <span>500+ cartas</span>
-        <span>39 seleções históricas</span>
-        <span>8 grupos</span>
-        <span>5 faixas D20</span>
+        <span>${stats.players} jogadores históricos</span>
+        <span>${stats.selections} seleções históricas</span>
+        <span>${stats.groups} grupos da Copa</span>
+        <span>${stats.d20Bands} faixas D20</span>
       </div>
       ${current && ["champion", "eliminated"].includes(current.status) ? `
         <article class="soft-card">
@@ -461,6 +462,15 @@
         </article>
       ` : ""}
     `;
+  }
+
+  function homeStats() {
+    return {
+      players: PLAYERS.length,
+      selections: HISTORIC_SELECTIONS.length,
+      groups: GROUP_NAMES.length,
+      d20Bands: DRAFT_RARITIES.length
+    };
   }
 
   function renderManual() {
@@ -2705,22 +2715,23 @@
     return OPPONENTS.find((opponent) => opponent.id === campaign.opponents[campaign.matchIndex]);
   }
 
-  function createOpponentPath() {
+  function createOpponentPath(excludedIds = new Set()) {
+    const used = new Set(excludedIds);
     const byDifficulty = (difficulty) => OPPONENTS.filter((opponent) => opponent.difficulty === difficulty);
-    const medium = shuffle(byDifficulty("medium"));
-    const strong = shuffle(byDifficulty("strong"));
-    const elite = shuffle(byDifficulty("elite"));
-    const historical = shuffle(byDifficulty("historical"));
-    const path = [
-      medium[0] || strong[0] || elite[0] || historical[0],
-      strong[0] || medium[1] || elite[0] || historical[0],
-      elite[0] || strong[1] || historical[0] || medium[1],
-      historical[0] || elite[1] || strong[1] || medium[1]
-    ].filter(Boolean);
+    const pickRoundOpponent = (difficulties) => {
+      const preferred = shuffle(difficulties.flatMap((difficulty) => byDifficulty(difficulty)))
+        .find((opponent) => opponent && !used.has(opponent.id));
+      const fallback = preferred || shuffle(OPPONENTS).find((opponent) => !used.has(opponent.id));
+      if (fallback) used.add(fallback.id);
+      return fallback;
+    };
 
-    return Array.from(new Set(path.map((opponent) => opponent.id))).concat(
-      shuffle(OPPONENTS).map((opponent) => opponent.id)
-    ).slice(0, 4);
+    return [
+      pickRoundOpponent(["medium", "strong"]),
+      pickRoundOpponent(["strong", "elite", "medium"]),
+      pickRoundOpponent(["elite", "historical", "strong"]),
+      pickRoundOpponent(["historical", "elite", "strong"])
+    ].filter(Boolean).map((opponent) => opponent.id);
   }
 
   function createWorldCup(campaign) {
@@ -2837,7 +2848,10 @@
       if (userRank > 0 && userRank <= 2) {
         campaign.status = "knockout";
         campaign.matchIndex = 0;
-        campaign.opponents = createOpponentPath();
+        const groupOpponentIds = new Set((currentGroup(campaign)?.teams || [])
+          .map((team) => team.id)
+          .filter((id) => id && id !== "user"));
+        campaign.opponents = createOpponentPath(groupOpponentIds);
       } else {
         finishCampaign(campaign, "eliminated", "Fase de grupos");
       }

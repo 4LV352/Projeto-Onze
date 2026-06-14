@@ -175,7 +175,7 @@ function simulateCampaign(label) {
   const userRank = standings.findIndex((row) => row.id === "user") + 1;
   if (userRank > 2) return "Grupos";
 
-  const path = createOpponentPath();
+  const path = createOpponentPath(new Set(groupOpponents.map((opponent) => opponent.id)));
   for (let index = 0; index < path.length; index += 1) {
     const result = play(team, path[index], true);
     if (result !== "win") return ROUND_NAMES[index];
@@ -212,17 +212,22 @@ function selectUserGroupOpponents() {
   return picked;
 }
 
-function createOpponentPath() {
+function createOpponentPath(excludedIds = new Set()) {
+  const used = new Set(excludedIds);
   const byDifficulty = (difficulty) => OPPONENTS.filter((opponent) => opponent.difficulty === difficulty);
-  const medium = shuffle(byDifficulty("medium"));
-  const strong = shuffle(byDifficulty("strong"));
-  const elite = shuffle(byDifficulty("elite"));
-  const historical = shuffle(byDifficulty("historical"));
+  const pickRoundOpponent = (difficulties) => {
+    const preferred = shuffle(difficulties.flatMap((difficulty) => byDifficulty(difficulty)))
+      .find((opponent) => opponent && !used.has(opponent.id));
+    const fallback = preferred || shuffle(OPPONENTS).find((opponent) => !used.has(opponent.id));
+    if (fallback) used.add(fallback.id);
+    return fallback;
+  };
+
   return [
-    medium[0] || strong[0] || elite[0] || historical[0],
-    strong[0] || medium[1] || elite[0] || historical[0],
-    elite[0] || strong[1] || historical[0] || medium[1],
-    historical[0] || elite[1] || strong[1] || medium[1]
+    pickRoundOpponent(["medium", "strong"]),
+    pickRoundOpponent(["strong", "elite", "medium"]),
+    pickRoundOpponent(["elite", "historical", "strong"]),
+    pickRoundOpponent(["historical", "elite", "strong"])
   ].filter(Boolean);
 }
 
@@ -232,6 +237,18 @@ function run(label, count = 100) {
     buckets[simulateCampaign(label)] += 1;
   }
   return buckets;
+}
+
+function finalOpponentDistribution(count = 100) {
+  const distribution = {};
+  for (let index = 0; index < count; index += 1) {
+    const groupOpponents = selectUserGroupOpponents();
+    const path = createOpponentPath(new Set(groupOpponents.map((opponent) => opponent.id)));
+    const finalOpponent = path[3];
+    if (!finalOpponent) continue;
+    distribution[finalOpponent.nome] = (distribution[finalOpponent.nome] || 0) + 1;
+  }
+  return Object.fromEntries(Object.entries(distribution).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])));
 }
 
 function randomizedLambda(lambda) {
@@ -272,3 +289,6 @@ for (const label of ["forte", "medio", "fraco"]) {
   console.log(`\nTime ${label} | OVR médio ${team.ovrAvg.toFixed(1)} | força ${team.overall.toFixed(1)} | ataque ${team.offense.toFixed(1)} | criação ${team.creativity.toFixed(1)} | defesa ${team.defense.toFixed(1)} | links +${Math.round(team.linkBonus.attack * 100)}% atk/+${Math.round(team.linkBonus.creativity * 100)}% cri`);
   console.table(run(label, 100));
 }
+
+console.log("\nDistribuição de finais sorteadas - 100 caminhos");
+console.table(finalOpponentDistribution(100));
