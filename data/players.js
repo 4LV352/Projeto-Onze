@@ -538,6 +538,9 @@ const selectionRosterCards = [
   ...selectionSquad("chile-2015", "Chile", 2015, "strong", ["Bravo", "Herrera", "Mena", "Medel", "Jara", "Isla", "Díaz", "Aránguiz", "Valdivia", "Alexis Sánchez", "Vargas", "Vidal"]),
   ...selectionSquad("colombia-2014", "Colômbia", 2014, "strong", ["Ospina", "Mondragón", "Armero", "Yepes", "Zapata", "Zúñiga", "Sánchez", "Aguilar", "James Rodríguez", "Cuadrado", "Jackson Martínez", "Falcao"]),
   ...selectionSquad("dinamarca-1992", "Dinamarca", 1992, "strong", ["Schmeichel", "Lars Høgh", "Henrik Andersen", "Lars Olsen", "Sivebæk", "Christofte", "Vilfort", "Jensen", "Brian Laudrup", "Povlsen", "Elstrup", "Flemming Povlsen"]),
+  ...selectionSquad("argentina-1990", "Argentina", 1990, "strong", ["Goycochea", "Pumpido", "Olarticoechea", "Ruggeri", "Simón", "Lorenzo", "Basualdo", "Burruchaga", "Maradona", "Caniggia", "Dezotti", "Troglio"]),
+  ...selectionSquad("portugal-2022", "Portugal", 2022, "strong", ["Diogo Costa", "Rui Patrício", "Nuno Mendes", "Rúben Dias", "Pepe", "João Cancelo", "William Carvalho", "Vitinha", "Bruno Fernandes", "Rafael Leão", "Bernardo Silva", "Cristiano Ronaldo"]),
+  ...selectionSquad("nigeria-1994", "Nigéria", 1994, "strong", ["Rufai", "Agu", "Eguavoen", "Uche Okechukwu", "Chidi Nwanu", "Keshi", "Oliseh", "Okocha", "Finidi", "Amunike", "Amokachi", "Yekini"]),
 
   ...selectionSquad("alemanha-2002", "Alemanha", 2002, "very-strong", ["Kahn", "Lehmann", "Ziege", "Metzelder", "Linke", "Frings", "Hamann", "Ballack", "Schneider", "Bode", "Klose", "Neuville"]),
   ...selectionSquad("argentina-2014", "Argentina", 2014, "very-strong", ["Romero", "Andújar", "Rojo", "Garay", "Demichelis", "Zabaleta", "Mascherano", "Biglia", "Di María", "Lavezzi", "Messi", "Higuaín"]),
@@ -547,6 +550,7 @@ const selectionRosterCards = [
   ...selectionSquad("belgica-2018", "Bélgica", 2018, "very-strong", ["Courtois", "Mignolet", "Vertonghen", "Kompany", "Alderweireld", "Meunier", "Witsel", "Dembélé", "De Bruyne", "Hazard", "Mertens", "Lukaku"]),
   ...selectionSquad("uruguai-2010", "Uruguai", 2010, "very-strong", ["Muslera", "Castillo", "Cáceres", "Lugano", "Godín", "Maxi Pereira", "Arévalo Ríos", "Pérez", "Forlán", "Cavani", "Suárez", "Abreu"]),
   ...selectionSquad("holanda-2014", "Holanda", 2014, "very-strong", ["Cillessen", "Krul", "Blind", "De Vrij", "Vlaar", "Janmaat", "De Jong", "Wijnaldum", "Sneijder", "Robben", "Kuyt", "Van Persie"]),
+  ...selectionSquad("brasil-2014", "Brasil", 2014, "very-strong", ["Júlio César", "Jefferson", "Marcelo", "Thiago Silva", "David Luiz", "Daniel Alves", "Luiz Gustavo", "Paulinho", "Oscar", "Neymar", "Hulk", "Fred"]),
 
   ...selectionSquad("brasil-1994", "Brasil", 1994, "finalist", ["Taffarel", "Zetti", "Branco", "Márcio Santos", "Aldair", "Jorginho", "Mauro Silva", "Dunga", "Raí", "Bebeto", "Mazinho", "Romário"]),
   ...selectionSquad("brasil-2002", "Brasil", 2002, "finalist", ["Marcos", "Dida", "Roberto Carlos", "Lúcio", "Roque Júnior", "Cafu", "Gilberto Silva", "Kleberson", "Ronaldinho", "Denílson", "Rivaldo", "Ronaldo"]),
@@ -558,15 +562,21 @@ const selectionRosterCards = [
   ...selectionSquad("franca-2018", "França", 2018, "finalist", ["Lloris", "Mandanda", "Lucas Hernández", "Umtiti", "Varane", "Pavard", "Kanté", "Pogba", "Griezmann", "Mbappé", "Dembélé", "Giroud"]),
   ...selectionSquad("holanda-2010", "Holanda", 2010, "finalist", ["Stekelenburg", "Vorm", "Van Bronckhorst", "Heitinga", "Mathijsen", "Van der Wiel", "Van Bommel", "De Jong", "Sneijder", "Kuyt", "Robben", "Van Persie"]),
   ...selectionSquad("franca-2006", "França", 2006, "finalist", ["Barthez", "Coupet", "Abidal", "Gallas", "Thuram", "Sagnol", "Makelele", "Vieira", "Zidane", "Ribéry", "Henry", "Trezeguet"]),
+  ...selectionSquad("alemanha-1990", "Alemanha", 1990, "finalist", ["Illgner", "Köpke", "Brehme", "Kohler", "Augenthaler", "Berthold", "Buchwald", "Matthäus", "Hässler", "Littbarski", "Klinsmann", "Völler"]),
+  ...selectionSquad("italia-1994", "Itália", 1994, "finalist", ["Pagliuca", "Marchegiani", "Maldini", "Baresi", "Costacurta", "Mussi", "Albertini", "Dino Baggio", "Donadoni", "Signori", "Roberto Baggio", "Massaro"]),
+  ...selectionSquad("espanha-2008", "Espanha", 2008, "finalist", ["Casillas", "Reina", "Capdevila", "Puyol", "Marchena", "Sergio Ramos", "Senna", "Xavi", "Iniesta", "Silva", "Torres", "Villa"]),
 
   ...selectionSquad("brasil-1958", "Brasil", 1958, "absolute", ["Gilmar", "Castilho", "Nilton Santos", "Bellini", "Orlando", "Djalma Santos", "Zito", "Didi", "Pelé", "Zagallo", "Garrincha", "Vavá"]),
   ...selectionSquad("brasil-1962", "Brasil", 1962, "absolute", ["Gilmar", "Castilho", "Nilton Santos", "Mauro Ramos", "Zózimo", "Djalma Santos", "Zito", "Didi", "Pelé", "Amarildo", "Garrincha", "Vavá"]),
   ...selectionSquad("brasil-1970", "Brasil", 1970, "absolute", ["Félix", "Ado", "Everaldo", "Brito", "Piazza", "Carlos Alberto", "Clodoaldo", "Gérson", "Rivellino", "Tostão", "Jairzinho", "Pelé"]),
+  ...selectionSquad("argentina-1978", "Argentina", 1978, "absolute", ["Fillol", "La Volpe", "Tarantini", "Passarella", "Galván", "Olguín", "Ardiles", "Gallego", "Houseman", "Bertoni", "Kempes", "Luque"]),
   ...selectionSquad("argentina-1986", "Argentina", 1986, "absolute", ["Pumpido", "Islas", "Olarticoechea", "Ruggeri", "Brown", "Giusti", "Batista", "Burruchaga", "Maradona", "Valdano", "Enrique", "Borghi"]),
   ...selectionSquad("alemanha-1974", "Alemanha", 1974, "absolute", ["Maier", "Nigbur", "Breitner", "Schwarzenbeck", "Beckenbauer", "Vogts", "Bonhof", "Overath", "Netzer", "Hölzenbein", "Grabowski", "Müller"]),
   ...selectionSquad("italia-1982", "Itália", 1982, "absolute", ["Zoff", "Bordon", "Cabrini", "Scirea", "Gentile", "Bergomi", "Tardelli", "Oriali", "Antognoni", "Conti", "Graziani", "Rossi"]),
   ...selectionSquad("holanda-1974", "Holanda", 1974, "absolute", ["Jongbloed", "Schrijvers", "Krol", "Rijsbergen", "Haan", "Suurbier", "Jansen", "Neeskens", "Van Hanegem", "Rep", "Rensenbrink", "Cruyff"]),
-  ...selectionSquad("brasil-1982", "Brasil", 1982, "absolute", ["Waldir Peres", "Paulo Sérgio", "Júnior", "Oscar", "Luizinho", "Leandro", "Cerezo", "Falcão", "Sócrates", "Éder", "Zico", "Serginho"])
+  ...selectionSquad("brasil-1982", "Brasil", 1982, "absolute", ["Waldir Peres", "Paulo Sérgio", "Júnior", "Oscar", "Luizinho", "Leandro", "Cerezo", "Falcão", "Sócrates", "Éder", "Zico", "Serginho"]),
+  ...selectionSquad("franca-1984", "França", 1984, "absolute", ["Bats", "Bergeroo", "Amoros", "Battiston", "Bossis", "Le Roux", "Tigana", "Giresse", "Platini", "Fernández", "Bellone", "Lacombe"]),
+  ...selectionSquad("holanda-1988", "Holanda", 1988, "absolute", ["Van Breukelen", "Hiele", "Van Tiggelen", "Koeman", "Rijkaard", "Van Aerle", "Wouters", "Mühren", "Gullit", "Vanenburg", "Van Basten", "Kieft"])
 ];
 
 const selectionTagOverrides = {
