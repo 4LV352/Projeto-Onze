@@ -703,6 +703,7 @@
           Confirmar escolhas
         </button>
       </article>
+      ${draftConfirmBar(campaign, selectedCards, selected.size === stage.qty, "Confirmar Convocados")}
     `;
   }
 
@@ -899,6 +900,7 @@
           Confirmar jogador
         </button>
       </article>
+      ${draftConfirmBar(campaign, selectedCards, pack.picks.length === 1, "Confirmar Convocado")}
     `;
   }
 
@@ -908,6 +910,21 @@
         <strong>${escapeHtml(selectionItem.nome)}</strong>
         <span>${escapeHtml(selectionLevelLabel(selectionItem.level))}</span>
       </button>
+    `;
+  }
+
+  function draftConfirmBar(campaign, selectedCards, canConfirm, label) {
+    const selectedIds = new Set(campaign.squad.map((player) => player.id));
+    const total = campaign.squad.length + selectedCards.filter((player) => !selectedIds.has(player.id)).length;
+    const complete = total >= 23;
+    return `
+      <div class="draft-confirm-bar ${canConfirm ? "ready" : ""} ${complete ? "complete" : ""}">
+        <div>
+          <strong>Convocados: ${total}/23</strong>
+          <small>${complete ? "Elenco completo" : (canConfirm ? "Pronto para confirmar esta escolha" : "Escolha os jogadores da etapa")}</small>
+        </div>
+        <button class="primary-button" data-action="draft-confirm" type="button" ${canConfirm ? "" : "disabled"}>${escapeHtml(label)}</button>
+      </div>
     `;
   }
 
@@ -3344,19 +3361,47 @@
 
   function penaltyShootoutPanel(result) {
     if (!result?.penalties?.shots?.length) return "";
-    const winnerName = result.penalties.winner === "user" ? (result.teamName || DEFAULT_TEAM_NAME) : result.opponentName;
+    const userName = result.teamName || DEFAULT_TEAM_NAME;
+    const opponentName = result.opponentName || "Adversário";
+    const winnerName = result.penalties.winner === "user" ? userName : opponentName;
+    const userShots = result.penalties.shots.filter((shot) => shot.team === "user");
+    const opponentShots = result.penalties.shots.filter((shot) => shot.team === "opponent");
     return `
       <div class="penalty-panel">
-        <strong>Disputa de pênaltis: ${escapeHtml(winnerName)} venceu</strong>
-        <div class="penalty-grid">
-          ${result.penalties.shots.map((shot) => `
-            <div class="penalty-shot ${shot.scored ? "scored" : "missed"}">
-              <span>${escapeHtml(shot.team === "user" ? (result.teamName || DEFAULT_TEAM_NAME) : result.opponentName)}</span>
-              <strong>${escapeHtml(shot.taker)}</strong>
-              <small>${shot.scored ? "✅ Gol" : "❌ Perdeu"}</small>
-            </div>
-          `).join("")}
+        <div class="penalty-panel-header">
+          <strong>Disputa de pênaltis: ${escapeHtml(winnerName)} venceu</strong>
+          <span class="penalty-result">${escapeHtml(userName)} ${result.penalties.userGoals} x ${result.penalties.opponentGoals} ${escapeHtml(opponentName)}</span>
         </div>
+        <div class="penalty-columns">
+          <div class="penalty-team-column">
+            <div class="penalty-team-header">
+              <span>${escapeHtml(userName)}</span>
+              <strong>${result.penalties.userGoals}</strong>
+            </div>
+            <div class="penalty-shot-list">
+              ${userShots.map(penaltyShotRow).join("")}
+            </div>
+          </div>
+          <div class="penalty-team-column">
+            <div class="penalty-team-header">
+              <span>${escapeHtml(opponentName)}</span>
+              <strong>${result.penalties.opponentGoals}</strong>
+            </div>
+            <div class="penalty-shot-list">
+              ${opponentShots.map(penaltyShotRow).join("")}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function penaltyShotRow(shot) {
+    return `
+      <div class="penalty-shot-row ${shot.scored ? "scored" : "missed"}">
+        <span class="penalty-icon">${shot.scored ? "✅" : "❌"}</span>
+        <strong>${escapeHtml(shot.taker)}</strong>
+        <small>${shot.scored ? "Gol" : "Perdeu"}</small>
       </div>
     `;
   }
@@ -3409,24 +3454,54 @@
           <span class="player-name">${escapeHtml(player.nome)}</span>
           <span class="ovr-badge">OVR ${ovr}</span>
         </span>
-        <span class="player-subline">${escapeHtml(String(player.ano))} · ${escapeHtml(player.pais)}</span>
-        <span class="player-meta-grid">
-          ${playerInfoPill("País", player.pais)}
-          ${player.clube ? playerInfoPill("Clube", player.clube) : ""}
-          ${player.idade ? playerInfoPill("Idade", `${player.idade}`) : ""}
-          ${playerInfoPill("Posição", player.posicoes.join(" / "))}
+        <span class="player-subline">${countryFlag(player.pais)} ${escapeHtml(player.pais)} · ${escapeHtml(String(player.ano))}${player.clube ? ` · ${escapeHtml(player.clube)}` : ""}${player.idade ? ` · ${escapeHtml(String(player.idade))} anos` : ""}</span>
+        <span class="player-compact-meta">
+          <span class="player-position-line">⚽ ${escapeHtml(player.posicoes.join(" / "))}</span>
         </span>
         <span class="tier-badge">${escapeHtml(statusLabel)}</span>
     `;
   }
 
-  function playerInfoPill(label, value) {
-    return `
-      <span class="player-info-pill">
-        <small>${escapeHtml(label)}</small>
-        <strong>${escapeHtml(value)}</strong>
-      </span>
-    `;
+  function countryFlag(country) {
+    const flags = {
+      "Alemanha": "🇩🇪",
+      "Argentina": "🇦🇷",
+      "Áustria": "🇦🇹",
+      "Bélgica": "🇧🇪",
+      "Brasil": "🇧🇷",
+      "Camarões": "🇨🇲",
+      "Canadá": "🇨🇦",
+      "Chile": "🇨🇱",
+      "Colômbia": "🇨🇴",
+      "Coreia do Sul": "🇰🇷",
+      "Costa Rica": "🇨🇷",
+      "Croácia": "🇭🇷",
+      "Dinamarca": "🇩🇰",
+      "Equador": "🇪🇨",
+      "Espanha": "🇪🇸",
+      "Estados Unidos": "🇺🇸",
+      "França": "🇫🇷",
+      "Gana": "🇬🇭",
+      "Grécia": "🇬🇷",
+      "Holanda": "🇳🇱",
+      "Inglaterra": "🏴",
+      "Itália": "🇮🇹",
+      "Japão": "🇯🇵",
+      "Marrocos": "🇲🇦",
+      "México": "🇲🇽",
+      "Nigéria": "🇳🇬",
+      "País de Gales": "🏴",
+      "Paraguai": "🇵🇾",
+      "Polônia": "🇵🇱",
+      "Portugal": "🇵🇹",
+      "República Tcheca": "🇨🇿",
+      "Senegal": "🇸🇳",
+      "Sérvia": "🇷🇸",
+      "Suécia": "🇸🇪",
+      "União Soviética": "🇷🇺",
+      "Uruguai": "🇺🇾"
+    };
+    return flags[country] || "🏳️";
   }
 
   function playerOverall(player) {
